@@ -1,0 +1,12 @@
+data/
+backup_data/
+output/
+meshes/
+model/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.pyw
+*.pyz
+*.pywz

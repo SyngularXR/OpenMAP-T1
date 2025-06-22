@@ -10,7 +10,7 @@ PROJECT_ROOT = os.path.abspath(os.path.join(CURRENT_DIR, "..", ".."))
 LEVEL_DIR = os.path.join(PROJECT_ROOT, "level")
 
 
-def create_parcellated_images(output, output_dir, basename, odata, data):
+def create_parcellated_images(output, output_dir, basename, odata, data, level=None):
     """
     Creates parcellated segmentation images for each specified level based on a mapping
     read from CSV files. The mapping is recalculated for each level using the original image labels.
@@ -48,8 +48,13 @@ def create_parcellated_images(output, output_dir, basename, odata, data):
         "Type2_Level5",
     ]
 
+    if level and level in all_level:
+        # user specified level
+        all_level = [level]
+
     # Process each target level
     for level in all_level:
+
         # Create mapping: original labels (from Type1_Level5) to new labels for the current level
         mapping = dict(zip(df_no["Type1_Level5"], df_no[level]))
 
@@ -66,10 +71,12 @@ def create_parcellated_images(output, output_dir, basename, odata, data):
         nii = processing.conform(
             nii,
             out_shape=(header["dim"][1], header["dim"][2], header["dim"][3]),
-            voxel_size=(header["pixdim"][1], header["pixdim"][2], header["pixdim"][3]),
+            voxel_size=(header["pixdim"][1], header["pixdim"]
+                        [2], header["pixdim"][3]),
             order=0,
         )
 
         # Construct the output file path and ensure the directory exists
         os.makedirs(os.path.join(output_dir, "parcellated"), exist_ok=True)
-        nib.save(nii, os.path.join(output_dir, f"parcellated/{basename}_{level}.nii"))
+        nib.save(nii, os.path.join(
+            output_dir, f"parcellated/{basename}_{level}.nii"))

@@ -1,3 +1,15 @@
+from utils.stripping import stripping
+from utils.preprocessing import preprocessing
+from utils.postprocessing import postprocessing
+from utils.parcellation import parcellation
+from utils.make_level import create_parcellated_images
+from utils.make_csv import make_csv
+from utils.load_model import load_model
+from utils.hemisphere import hemisphere
+from utils.functions import reimburse_conform
+from utils.cropping import cropping
+import numpy as np
+import nibabel as nib
 import argparse
 import glob
 import os
@@ -9,20 +21,6 @@ from tqdm import tqdm as std_tqdm
 
 tqdm = partial(std_tqdm, dynamic_ncols=True)
 
-import nibabel as nib
-import numpy as np
-
-from utils.cropping import cropping
-from utils.functions import reimburse_conform
-from utils.hemisphere import hemisphere
-from utils.load_model import load_model
-from utils.make_csv import make_csv
-from utils.make_level import create_parcellated_images
-from utils.parcellation import parcellation
-from utils.postprocessing import postprocessing
-from utils.preprocessing import preprocessing
-from utils.stripping import stripping
-
 
 def create_parser():
     """
@@ -31,7 +29,8 @@ def create_parser():
     Returns:
         argparse.Namespace: Parsed command-line arguments.
     """
-    parser = argparse.ArgumentParser(description="Use this to run inference with OpenMAP-T1.")
+    parser = argparse.ArgumentParser(
+        description="Use this to run inference with OpenMAP-T1.")
     parser.add_argument(
         "-i",
         required=True,
@@ -47,7 +46,13 @@ def create_parser():
         required=True,
         help="Folder of pretrained models. Indicates the location of the pretrained models to be used for processing.",
     )
-    
+
+    parser.add_argument(
+        "-l",
+        required=True,
+        help="Level of parcellation. Indicates the level of parcellation to be used for processing.",
+    )
+
     # Create a mutually exclusive group for processing modes.
     # If one of these options is specified, only that processing step is performed and the remaining steps are skipped.
     group = parser.add_mutually_exclusive_group()
@@ -61,7 +66,7 @@ def create_parser():
         action="store_true",
         help="Perform only skull stripping. If specified, only skull stripping will be executed and all other processing steps will be skipped.",
     )
-    
+
     args = parser.parse_args()
     print("Parsed arguments:", args)
     return args
@@ -118,7 +123,8 @@ def main():
 
     # Load the pretrained models
     try:
-        cnet, ssnet, pnet_c, pnet_s, pnet_a, hnet_c, hnet_a = load_model(opt, device)
+        cnet, ssnet, pnet_c, pnet_s, pnet_a, hnet_c, hnet_a = load_model(
+            opt, device)
         print("Load complete !!")
     except Exception as e:
         print("Error during model loading:", e)
@@ -149,7 +155,8 @@ def main():
         odata = nib.squeeze_image(nib.as_closest_canonical(nib.load(path)))
 
         # Create a new NIfTI image with the data converted to float32
-        nii = nib.Nifti1Image(odata.get_fdata().astype(np.float32), affine=odata.affine)
+        nii = nib.Nifti1Image(odata.get_fdata().astype(
+            np.float32), affine=odata.affine)
 
         # Save the new NIfTI image to the output directory
         os.makedirs(os.path.join(output_dir, "original"), exist_ok=True)
@@ -165,11 +172,12 @@ def main():
             continue
 
         # Strip the image using the stripping network
-        stripped, shift = stripping(output_dir, basename, cropped, odata, data, ssnet, device)
+        stripped, shift = stripping(
+            output_dir, basename, cropped, odata, data, ssnet, device)
 
         if opt.only_skull_stripping:
             continue
-        
+
         # Parcellate the stripped image using the parcellation networks
         parcellated = parcellation(stripped, pnet_c, pnet_s, pnet_a, device)
 
@@ -188,13 +196,16 @@ def main():
         nii = processing.conform(
             nii,
             out_shape=(header["dim"][1], header["dim"][2], header["dim"][3]),
-            voxel_size=(header["pixdim"][1], header["pixdim"][2], header["pixdim"][3]),
+            voxel_size=(header["pixdim"][1], header["pixdim"]
+                        [2], header["pixdim"][3]),
             order=0,
         )
         os.makedirs(os.path.join(output_dir, "parcellated"), exist_ok=True)
-        nib.save(nii, os.path.join(output_dir, f"parcellated/{basename}_Type1_Level5.nii"))
+        nib.save(nii, os.path.join(
+            output_dir, f"parcellated/{basename}_Type1_Level5.nii"))
 
-        create_parcellated_images(output, output_dir, basename, odata, data)
+        create_parcellated_images(
+            output, output_dir, basename, odata, data, opt.l)
 
         # Clean up temporary files
         del odata, data
